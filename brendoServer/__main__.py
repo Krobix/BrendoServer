@@ -12,6 +12,10 @@ import pprint
 
 db = lib.serverStart()
 
+@bottle.get('/<filename:re:.*\.css>')
+def stylesheets(filename):
+	return bottle.static_file(filename, root='static/')
+
 @bottle.route("/")
 def start():
 	c = db.cursor()
@@ -39,7 +43,7 @@ def installPage():
 		db.commit()
 		return pages.installComplete
 	elif not getArg("username")==None and lib.login(getArg("username"), getArg("password"), c)[1][3] != "admin":
-		return bottle.abort(401, "Admin perms needed to view this page.")
+		return bottle.abort(401, pages.errPage(8))
 	else:
 		return pages.reinstallPage 
 		
@@ -51,16 +55,16 @@ def loginPage():
 		print(username)
 	password = getArg("password")
 	if username==None:
-		return pages.loginFailed + pages.loginPage
+		return pages.loginFailed % (7,) + pages.loginPage
 	ses = lib.createSession(username, password, db.cursor())
 	if lib.debugMode:
 		print(ses)
-	if ses==False:
-		return pages.loginFailed + pages.loginPage
+	if ses[0]==False:
+		return pages.loginFailed % ses[1] + pages.loginPage
 	else:
 		if lib.debugMode:
 			print(ses)
-		bottle.response.set_cookie("session_id", ses)
+		bottle.response.set_cookie("session_id", ses[0])
 		if lib.debugMode:
 			print(bottle.request.get_cookie("session_id"))
 		return pages.redirectToHomePage
@@ -71,10 +75,10 @@ def homePage():
 	if lib.debugMode:
 		print(sessionId)
 	if sessionId == None:
-		bottle.abort(401, "You must be logged in to view this page.")
+		bottle.abort(401, pages.errPage(6))
 	session = lib.getUserFromSession(sessionId, db.cursor())
 	if not session:
-		bottle.abort(401, "You must be logged in to view this page.")
+		bottle.abort(401, pages.errPage(6))
 	else:
 		return pages.homePage.format(session[1][1])
 		
@@ -84,7 +88,7 @@ def signupPage():
 	try:
 		signUpFailed = bottle.request.query.failed
 		if int(signUpFailed):
-			return pages.signupFailed + pages.signUpPage
+			return pages.signupFailed % (3,) + pages.signUpPage
 	except:
 		pass
 	c.execute("SELECT * FROM config WHERE setting='signupAllowed'")
@@ -92,7 +96,7 @@ def signupPage():
 	if signupsAllowed:
 		return pages.signUpPage
 	else:
-		bottle.abort(401, "Sign Ups are disallowed on this server.")
+		bottle.abort(401, pages.errPage(5))
 		
 @bottle.route("/signup/p", method="POST")
 def signupProcessing():
@@ -100,7 +104,7 @@ def signupProcessing():
 	username = getArg("username")
 	password = getArg("password")
 	if username == None or password == None:
-		bottle.abort(400, "The required POST arguments were not given. Please go back to the signup page.")
+		bottle.abort(400, pages.errPage(7))
 	else:
 		newUser = lib.signup(username, password, db.cursor())
 		if newUser[0]==False:
@@ -112,11 +116,11 @@ def signupProcessing():
 def userPage(id):
 	sessionId = bottle.request.get_cookie("session_id")
 	if lib.getUserFromSession(sessionId, db.cursor()) == None:
-		bottle.abort(401, "You must be logged in to view this page.")
+		bottle.abort(401, pages.errPage(6))
 	else:
 		user = lib.getUserFromId(id, db.cursor())
 		if user[0] == False:
-			bottle.abort(404, "A user with that ID could not be found.")
+			bottle.abort(404, pages.errPage(4))
 		else:
 			return pages.userPage % (user[1][1], user[1][3])
 			
@@ -124,11 +128,11 @@ def userPage(id):
 def userListPage(page):
 	sessionId = bottle.request.get_cookie("session_id")
 	if lib.getUserFromSession(sessionId, db.cursor()) == None:
-		bottle.abort(401, "You must be logged in to view this page.")
+		bottle.abort(401, pages.errPage(6))
 	else:
 		p = lib.generateUserLinkPage(db.cursor(), pagenumber=page)
 		if p == None:
-			bottle.abort(404, "Not enough users to show.")
+			bottle.abort(404, pages.errPage(4))
 		else:
 			return p
 			
@@ -139,7 +143,7 @@ def uploadPage():
 	if user[0]==True:
 		return pages.uploadPage
 	else:
-		bottle.abort(401, "You must be logged in to view this page.")
+		bottle.abort(401, pages.errPage(4))
 
 @bottle.route("/upload/p", method="POST")
 def uploadProcessingPage():
@@ -154,14 +158,14 @@ def uploadProcessingPage():
 @bottle.route("/debug")
 def debugPage():
 	if not lib.debugMode:
-		bottle.abort(500, "Debug Mode isn't enabled.")
+		bottle.abort(500, pages.errPage(5))
 	else:
 		return pages.debugPage
 		
 @bottle.route("/debug/<action>")
 def debugPageAction(action):
 	if not lib.debugMode:
-		bottle.abort(500, "Debug Mode isn't enabled.")
+		bottle.abort(500, pages.errPage(5))
 	else:
 		if action == "vars":
 			sessionId = bottle.request.cookies.get("session_id")

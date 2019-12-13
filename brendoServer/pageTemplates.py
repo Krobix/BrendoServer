@@ -1,7 +1,11 @@
 #You probably shouldnt modify these.
 
-loginPage = '''
-<h1 style="text-align:center;">Brendo Server Login</h1>
+ssheet = "<link rel='stylesheet' href='styles.css'>"
+
+errPage = lambda x: f"An error has occured (err code: {x})"
+
+loginPage = ssheet + '''
+<h1>Brendo Server Login</h1>
 <form action="/login" method="post">
 	Username<input name="username" type="text" /><br />
 	Password<input name="password" type="password" /><br />
@@ -10,12 +14,13 @@ loginPage = '''
 <a href="/signup">Create Account</a>
 '''
 
-loginFailed = '''<p style="text-align:center;">Login failed. Please make sure your credentials are correct.</p>'''
+loginFailed = ssheet + '''<p>Login failed. Please make sure your credentials are correct. (err code %s)</p>'''
 
-signupFailed = '''<b style="text-align:center;">Sign Up Failed: a user with that name already exists.
+signupFailed = ssheet + '''<b>Sign Up Failed: a user with that name already exists. (err 
+code %s)
 </b><br />'''
 
-installSignUp = '''
+installSignUp = ssheet + '''
 <b>Brendo Server Setup</b><br />
 Please set up the owner\'s account.<br />
 <form action="/install" method="post">
@@ -25,8 +30,8 @@ Please set up the owner\'s account.<br />
 </form>
 '''
 
-signUpPage = '''
-<h1 style="text-align:center;">Sign Up</h1><br />
+signUpPage = ssheet + '''
+<h1>Sign Up</h1><br />
 <form action="/signup/p" method="post">
 	Username<input name="username" type="text" /><br />
 	Password<input name="password" type="password" /><br />
@@ -34,21 +39,21 @@ signUpPage = '''
 </form>
 '''
 
-installComplete = '''<b>Base installation finished. You may now <a href="/">go back to the home page</a>.</b>'''
+installComplete = ssheet + '''<b>Base installation finished. You may now <a href="/">go back to the home page</a>.</b>'''
 
-reinstallPage = '''<b style="text-align:center;">run the server with the argument as "reinstall" to 
-reinstall. NOTE: This will also erase extensions!</b>'''
+reinstallPage = ssheet + '''<b>run the server with the argument as "reinstall" 
+to reinstall. NOTE: This will also erase extensions!</b>'''
 
-homePage = '''<p style="text-align:center;">Welcome back, {}!<br /><a href="/userlist/0">View User List</a>
+homePage = ssheet + '''<p >Welcome back, {}!<br /><a href="/userlist/0">View User List</a>
 <br/><a href="/upload">Upload file</a></p>'''
 
-redirectToLoginPage = '''<a href="/" style="text-align:center;">Click here to go to login page!</a>'''
+redirectToLoginPage = ssheet + '''<a href="/" >Click here to go to login page!</a>'''
 
-redirectToHomePage = '''<a href="/home" style="text-align:center;">Click here to go to home page!</a>'''
+redirectToHomePage = ssheet + '''<a href="/home" >Click here to go to home page!</a>'''
 
-userPage = '''<p style="text-align:center;">Username: %s <br /> User Group: %s <br /></p>'''
+userPage = ssheet + '''<p >Username: %s <br /> User Group: %s <br /></p>'''
 
-uploadPage= '''<h2 style="text-align:center;">Upload a File</h2>
+uploadPage= ssheet + '''<h2 >Upload a File</h2>
 <form action="/upload/p" method="post" enctype="multipart/form-data">
 Select File to Upload: <input type="file" name="file" /><br />
 Enter Directory Id (Leave at default for root directory): <input type="text" name="directory" value="-1" />
@@ -56,4 +61,4 @@ Enter Directory Id (Leave at default for root directory): <input type="text" nam
 <br/><input type="submit" value="upload" />
 <form/>'''
 
-debugPage = '''<a href="/debug/vars">vars</a><br/><a href="/debug/pages">pages</a>'''
+debugPage = ssheet + '''<a href="/debug/vars">vars</a><br/><a href="/debug/pages">pages</a>'''

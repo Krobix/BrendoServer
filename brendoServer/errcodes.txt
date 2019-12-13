@@ -1,0 +1,11 @@
+List of error codes
+
+0 - An error that does not fit into any other category
+1 - Login failed; password incorrect or user does not exist
+2 - Login failed; sqlite 3 error
+3 - Signup failed; user with that name already exists
+4 - Nonexistent user requested
+5 - Operation disallowed by server configuration
+6 - You are attempting to view a page that requires you to be logged in while not logged in
+7 - Invalid arguments given
+8 - You don't have the valid permissions to view the page

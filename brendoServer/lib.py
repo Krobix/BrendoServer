@@ -1,8 +1,7 @@
 """This module for functions that dont directly return any pages / Dynamic page generation.
 Public vars in this module:
 debugMode: bool, if True prints debug info. Retreived from config table in database.
-sessionStore: sqlite3 connection to storage/tmp/sessionStore.db
-This module also contains a few classes for objects that will be pickled"""
+sessionStore: sqlite3 connection to storage/tmp/sessionStore.db"""
 import sqlite3, os, uuid, pickle
 from shutil import rmtree
 
@@ -60,7 +59,7 @@ def login(username, password, cursor):
 	try:
 		c.execute("SELECT * FROM users WHERE username=?", (username,))
 		user = c.fetchone()
-		if password == user[2]:
+		if not user == None and password == user[2]:
 			return (True, user)
 		else:
 			return (False, 1)
@@ -84,7 +83,7 @@ def signup(username, password, cursor, userGroup="member"):
 			print(login(username, password, c))
 		return login(username, password, c)
 	else:
-		return (False, None)
+		return (False, 3)
 
 def getUserFromSession(sessionId, cu):
 	"""Sessions keep the login info temporarily.
@@ -103,12 +102,12 @@ def getUserFromSession(sessionId, cu):
 	
 def createSession(username, password, cursor):	
 		"""Creates a session. cursor should be a connection to storage/brendoServer.db
-		returns False if unsuccessful and the session ID if successful"""
+		returns (False, <errcode>) if unsuccessful and the session ID along with the user if successful"""
 		user = login(username, password, cursor)
 		if debugMode:
 			print(user)
 		if not user[0]:
-			return False
+			return (False, user[1])
 		else:
 			c = sessionStore.cursor()
 			sessionId = uuid.uuid4().hex
@@ -116,13 +115,14 @@ def createSession(username, password, cursor):
 				print(sessionId)
 			c.execute("INSERT INTO sessions VALUES (?, ?)", (sessionId, user[1][0]))	
 			sessionStore.commit()
-			return sessionId
+			return (sessionId, user[1])
 			
-def checkSessions(sessionId, c):
+def delInactiveSessions(sessionId, c):
 	"""This function checks to remove any unused sessions. Always returns None. c should be the cursor object 
 	and sessionId should be the sessionId currently in use by the client."""
 	c2 = sessionStore.cursor()
 	c2.execute("SELECT * FROM sessions WHERE sessionId=?", (sessionId,))
+	usr = getUserFromSession(sessionId, c)
 	
 			
 def getUserFromId(id, c):
