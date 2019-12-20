@@ -1,6 +1,6 @@
 #You probably shouldnt modify these.
 
-ssheet = "<link rel='stylesheet' href='styles.css'>"
+ssheet = "<link rel='stylesheet' href='/styles.css'>"
 
 errPage = lambda x: f"An error has occured (err code: {x})"
 

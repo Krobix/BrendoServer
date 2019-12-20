@@ -1,28 +1,37 @@
 """This module for functions that dont directly return any pages / Dynamic page generation.
 Public vars in this module:
 debugMode: bool, if True prints debug info. Retreived from config table in database.
-sessionStore: sqlite3 connection to storage/tmp/sessionStore.db"""
-import sqlite3, os, uuid, pickle
+sessionStore: sqlite3 connection to storage/tmp/sessionStore.db
+BASE_DATA_FILE: original data to be put in storage/data.vance
+vdata: the read contents of storage/data.vance"""
+import sqlite3, os, uuid, vance
 from shutil import rmtree
 
+BASE_DATA_FILE = { #Change if you wish to change the original contents of storage/data.vance
+	"start": "serverStart",
+	"ext_folder": "storage/ext",
+	"m_folder": "storage/media",
+	"t_folder": "storage/tmp"
+}
 
 def serverStart():
-	global sessionStore, debugMode
+	global sessionStore, debugMode, vdata
 	"""Function that calls at server start. Creates the tmp db sessionStore and connects and returns 
 	storage/brendoServer.db . also defines all global variables."""
 	if not os.path.exists(f"{os.getcwd()}/storage"):
 		db = setupStorage()
 	else:
 		db = sqlite3.connect("storage/brendoServer.db")
+	vdata = vance.load(open("storage/data.vance", "rb"))
 	try:
-		rmtree("storage/tmp")
+		rmtree(vdata["t_folder"])
 	except:
 		pass
 	c = db.cursor()
 	c.execute("SELECT * FROM config WHERE setting='debugMode'")
 	debugMode = c.fetchone()[1]
-	os.mkdir("storage/tmp")
-	sessionStore = sqlite3.connect("storage/tmp/sessionStore.db")
+	os.mkdir(vdata["t_folder"])
+	sessionStore = sqlite3.connect(f"{BASE_DATA_FILE['t_folder']}/sessionStore.db")
 	sessionStore.cursor().execute("""CREATE TABLE sessions 
 	(sessionId text, userId int)""")
 	sessionStore.commit()
@@ -33,9 +42,11 @@ def setupStorage():
 	Sets up the storage folder and DB on first run. returns slite3 connection object.
 	"""
 	os.mkdir("storage")
-	os.mkdir("storage/ext") #Extensions folder
-	os.mkdir("storage/media") #Where all of the uploaded files go
-	os.mkdir("storage/tmp") #sessionStore and others stored here
+	vdata = vance.createVanceData(data=BASE_DATA_FILE)
+	vance.dump(vdata, open("storage/data.vance", "wb"), fname="data.vance")
+	os.mkdir(BASE_DATA_FILE["ext_folder"]) #Extensions folder
+	os.mkdir(BASE_DATA_FILE["m_folder"]) #Where all of the uploaded files go
+	os.mkdir(BASE_DATA_FILE["t_folder"]) #sessionStore and others stored here
 	db = sqlite3.connect("storage/brendoServer.db")
 	tempC = db.cursor()
 	tempC.execute("""CREATE TABLE config
@@ -157,21 +168,3 @@ def generateUserLinkPage(c, pagenumber=0):
 			currentId += 1
 		return resultPage + pageButtons
 		
-def uploadFile(file, isPublic, userId, cu, dirId=-1, fcontents=""):
-	"""Takes a bottle FileUpload instance as an argument and adds it to storage/media as well as adds its 
-	info to the database. cu should be the db cursor. isPublic should be a bool. userId should be the 
-	uploaders id. dirId is the directory ID and defaults to -1. fcontents should be the file's contents."""
-	fakeName = file.filename
-	extension = os.path.splitext(file.filename)[1]
-	cu.execute("SELECT * FROM files WHERE fileId=(SELECT MAX(fileId) FROM files)")
-	newId = cu.fetchone()
-	if newId==None:
-		newId = 0
-	else:
-		newId = newId[1]	
-	fileName = f"userfile-{newId}-{userId}.{extension}"
-	with open("storage/media/" + fileName, "wb") as fw:
-		fw.write(fcontents)
-	cu.execute("INSERT INTO files VALUES (?, ?, ?, ?, ?, ?)",
-	(userId, newId, dirId, fakeName, fileName, isPublic))
-	cu.connection.commit()

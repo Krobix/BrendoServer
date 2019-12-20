@@ -1,5 +1,6 @@
 import pageTemplates as pages
 import lib
+import vance
 import bottle
 import sqlite3 as sql
 import os
@@ -10,7 +11,13 @@ import pprint
 #session = bottle.request.cookies.get("sessionId")
 #For copy/paste purposes
 
-db = lib.serverStart()
+try:
+	vdata = vance.load(open("storage/data.vance", "rb"))
+except Exception as e:
+	print(f"Unable to fetch data.vance; continuing ({e})")
+	vdata = lib.BASE_DATA_FILE
+
+db = lib.__dict__[vdata["start"]]()
 
 @bottle.get('/<filename:re:.*\.css>')
 def stylesheets(filename):
@@ -150,10 +157,28 @@ def uploadProcessingPage():
 	sessionId = bottle.request.get_cookie("session_id")
 	user = lib.getUserFromSession(sessionId, db.cursor())
 	if user[0]==True:	
-		file = bottle.request.files.get("file")
-		ispublic = bottle.request.forms.get("public")
-		lib.uploadFile(file, ispublic, user[1][0], db.cursor())
-		return 
+		try:
+			file = bottle.request.files.get("file")
+			ispublic = bottle.request.forms.get("public")
+			dirid = bottle.request.forms.get("directory")
+		except:
+			bottle.abort(401, pages.errPage(7))
+		cu = db.cursor()
+		usrId = int(user[1][0])
+		cu.execute("SELECT MAX(fileId) FROM files")
+		fileId = cu.fetchone()[0]
+		if fileId == None:
+			fileId = 0
+		else:
+			fileId += 1
+		truefname = file.filename
+		truefnamesp = os.path.splitext(truefname)
+		newfname = f"upload-{usrId}-{fileId}.{truefnamesp[1]}"
+		cu.execute("INSERT INTO files VALUES (?, ?, ?, ?, ?, ?)",
+		(usrId, fileId, dirid, truefname, newfname, ispublic))
+		db.commit()
+		file.save(vdata["m_folder"] + os.path.sep + newfname)
+		return "Success" 
 		
 @bottle.route("/debug")
 def debugPage():
@@ -180,4 +205,4 @@ def debugPageAction(action):
 			return retstr 
 
 if __name__ == "__main__":		
-	bottle.run(host=argv[1], port=argv[2], debug=True)
+	bottle.run(host=argv[1], port=argv[2], debug=lib.debugMode)
